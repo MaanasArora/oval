@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import numpy as np
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import LinearRegression
 from oval.conversation import Conversation, Comment, User
 from oval.decomposition import decompose_votes
 
@@ -21,7 +21,6 @@ class Variable:
         labels: dict[int, float],
         decomposed_votes: Optional[np.ndarray] = None,
         ndim: int = 3,
-        alpha: float = 1.0,
     ):
         comment_indices = self.conversation.comment_ids_to_indices(list(labels.keys()))
         label_values = np.array(list(labels.values()))
@@ -39,13 +38,10 @@ class Variable:
         if decomposed_votes is None:
             raise ValueError("Decomposed votes could not be computed.")
 
-        X = decomposed_votes[:, :ndim]
-        y = participant_prop_labels
+        model = LinearRegression()
+        model.fit(decomposed_votes, participant_prop_labels)
 
-        model = Lasso(alpha=alpha)
-        model.fit(X, y)
-
-        pred = model.predict(X)
+        pred = model.predict(decomposed_votes)
 
         self.labels = labels
         self.participant_pred = pred
@@ -61,7 +57,9 @@ class Variable:
         votes_matrix_labels = self.conversation.votes_matrix[:, comment_indices]
         votes_matrix_labels = np.nan_to_num(votes_matrix_labels, nan=0)
 
-        pred = votes_matrix_labels.T @ self.participant_pred / len(self.conversation.users)
+        pred = (
+            votes_matrix_labels.T @ self.participant_pred / len(self.conversation.users)
+        )
         return pred
 
     def score_comments(self, comment_ids: List[int], labels: dict[int, float]) -> float:
