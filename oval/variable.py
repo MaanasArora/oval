@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import numpy as np
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
 from oval.conversation import Conversation, Comment, User
 from oval.decomposition import decompose_votes
 
@@ -42,7 +42,7 @@ class Variable:
         X = decomposed_votes[:, :ndim]
         y = participant_prop_labels
 
-        model = Ridge(alpha=alpha)
+        model = Lasso(alpha=alpha)
         model.fit(X, y)
 
         pred = model.predict(X)

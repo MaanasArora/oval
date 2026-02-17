@@ -16,7 +16,7 @@ train_labels, test_labels = train_test_split(
 )
 
 variable = Variable(conversation=conversation, name="Risk Tolerance")
-variable.fit(labels=dict(train_labels), ndim=3)
+variable.fit(labels=dict(train_labels), ndim=100, alpha=0.25)
 
 test_comment_ids = [cid for cid, _ in test_labels]
 r = variable.score_comments(test_comment_ids, dict(test_labels))
