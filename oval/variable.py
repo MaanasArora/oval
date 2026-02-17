@@ -22,9 +22,7 @@ class Variable:
         decomposed_votes: Optional[np.ndarray] = None,
         ndim: int = 3,
     ):
-        comment_indices = np.array(
-            list(map(self.conversation.comment_id_to_index.get, labels.keys()))
-        )
+        comment_indices = self.conversation.comment_ids_to_indices(list(labels.keys()))
         label_values = np.array(list(labels.values()))
         votes_matrix_labels = self.conversation.votes_matrix[:, comment_indices]
 
@@ -57,9 +55,7 @@ class Variable:
         if self.labels is None or self.participant_pred is None:
             raise ValueError("Variable must be fitted before scoring comments.")
 
-        comment_indices = np.array(
-            list(map(self.conversation.comment_id_to_index.get, comment_ids))
-        )
+        comment_indices = self.conversation.comment_ids_to_indices(comment_ids)
 
         votes_matrix_labels = self.conversation.votes_matrix[:, comment_indices]
         votes_matrix_labels = np.nan_to_num(votes_matrix_labels, nan=0)

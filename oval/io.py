@@ -11,6 +11,14 @@ def read_polis(path_comments, path_votes, body_column="comment-body"):
     for user_id in pd.concat([comments["author-id"], votes["participant"]]).unique():
         users[user_id] = User(id=user_id)
 
+    if not users:
+        raise ValueError("No valid users found.")
+    
+    for cols in [["comment-id", "author-id", body_column], ["participant"]]:
+        for col in cols:
+            if col not in comments.columns and col not in votes.columns:
+                raise ValueError(f"Required column '{col}' not found in the input files.")
+
     comments = comments.rename(
         columns={
             "comment-id": "id",

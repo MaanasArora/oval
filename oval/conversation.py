@@ -65,6 +65,15 @@ class Conversation:
             for idx, comment in enumerate(self.comments)
         }
         return self._comment_id_to_index_cache
+    
+    def comment_ids_to_indices(self, comment_ids: List[int]) -> List[int]:
+        indices = [self.comment_id_to_index.get(cid) for cid in comment_ids]
+        
+        if None in indices:
+            missing_ids = [cid for cid, idx in zip(comment_ids, indices) if idx is None]
+            raise ValueError(f"Comment IDs not found in conversation: {missing_ids}")
+        
+        return [idx for idx in indices if idx is not None]
 
     def _build_vote_matrix_from_votes(self):
         if not self.votes:
