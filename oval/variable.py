@@ -61,7 +61,7 @@ class Variable:
         votes_matrix_labels = self.conversation.votes_matrix[:, comment_indices]
         votes_matrix_labels = np.nan_to_num(votes_matrix_labels, nan=0)
 
-        pred = votes_matrix_labels.T @ self.participant_pred
+        pred = votes_matrix_labels.T @ self.participant_pred / len(self.conversation.users)
         return pred
 
     def score_comments(self, comment_ids: List[int], labels: dict[int, float]) -> float:
