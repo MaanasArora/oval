@@ -21,6 +21,7 @@ class Variable:
         labels: dict[int, float],
         decomposed_votes: Optional[np.ndarray] = None,
         ndim: int = 3,
+        relevance_scoring: bool = False,
     ):
         comment_indices = self.conversation.comment_ids_to_indices(list(labels.keys()))
         label_values = np.array(list(labels.values()))
@@ -30,6 +31,9 @@ class Variable:
         votes_matrix_labels = np.nan_to_num(votes_matrix_labels, nan=0)
 
         participant_prop_labels = votes_matrix_labels @ label_values
+        if relevance_scoring:
+            participant_relevance = np.abs(votes_matrix_labels) @ np.abs(label_values)
+            participant_prop_labels *= np.sqrt(participant_relevance)
 
         if decomposed_votes is None:
             decomposed_votes, pca = decompose_votes(
