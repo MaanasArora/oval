@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 from oval.conversation import Conversation, Comment, User
 from oval.decomposition import decompose_votes
 
@@ -21,6 +21,7 @@ class Variable:
         labels: dict[int, float],
         decomposed_votes: Optional[np.ndarray] = None,
         ndim: int = 3,
+        alpha: float = 1.0,
     ):
         comment_indices = self.conversation.comment_ids_to_indices(list(labels.keys()))
         label_values = np.array(list(labels.values()))
@@ -41,7 +42,7 @@ class Variable:
         X = decomposed_votes[:, :ndim]
         y = participant_prop_labels
 
-        model = LinearRegression()
+        model = Ridge(alpha=alpha)
         model.fit(X, y)
 
         pred = model.predict(X)
