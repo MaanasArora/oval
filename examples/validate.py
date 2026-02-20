@@ -1,5 +1,5 @@
 from oval.io import read_polis
-from oval.variable import Variable
+from oval.variable import DiffusionVariable
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -15,9 +15,8 @@ train_labels, test_labels = train_test_split(
     list(labels.items()), test_size=0.4, random_state=42
 )
 
-variable = Variable(conversation=conversation, name="Risk Tolerance")
-variable.fit(labels=dict(train_labels), ndim=100)
+variable = DiffusionVariable(conversation=conversation)
+variable.fit(anchors=dict(train_labels))
 
-test_comment_ids = [cid for cid, _ in test_labels]
-r = variable.score_comments(test_comment_ids, dict(test_labels))
+r = variable.score_comments(dict(test_labels))
 print(f"Test R: {r:.4f}")
