@@ -11,6 +11,8 @@ def decompose_votes(
         reducer = umap.UMAP(n_components=num_components, random_state=42)
     elif method == "pca":
         reducer = PCA(n_components=num_components)
+    else:
+        raise ValueError(f"Unsupported decomposition method: {method}")
     transformed = reducer.fit_transform(vote_matrix_nonan)
 
     total_votes = np.sum(~np.isnan(vote_matrix), axis=1)
