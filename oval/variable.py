@@ -126,11 +126,11 @@ class DiffusionVariable(Variable):
         comment_scores_anchor = comment_scores[anchor_mask]
         comment_scores_nonanchor = comment_scores[~anchor_mask]
 
-        anchor_mean, anchor_std = np.mean(comment_scores_anchor), np.std(
-            comment_scores_anchor
+        anchor_mean, anchor_std = np.mean(comment_scores_anchor), np.abs(
+            np.std(comment_scores_anchor)
         )
-        nonanchor_mean, nonanchor_std = np.mean(comment_scores_nonanchor), np.std(
-            comment_scores_nonanchor
+        nonanchor_mean, nonanchor_std = np.mean(comment_scores_nonanchor), np.abs(
+            np.std(comment_scores_nonanchor)
         )
 
         comment_scores[anchor_mask] = (comment_scores_anchor - anchor_mean) / (
@@ -142,7 +142,7 @@ class DiffusionVariable(Variable):
 
         participant_scores = f[: votes_matrix.shape[0]]
         participant_scores = (participant_scores - np.mean(participant_scores)) / (
-            np.std(participant_scores) + 1e-10
+            np.abs(np.std(participant_scores)) + 1e-10
         )
 
         f[votes_matrix.shape[0] :] = comment_scores
