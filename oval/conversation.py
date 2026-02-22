@@ -51,8 +51,7 @@ class Conversation:
         if self._user_id_to_index_cache is not None:
             return self._user_id_to_index_cache
         self._user_id_to_index_cache = {
-            user.id: idx
-            for idx, user in enumerate(self.users)
+            user.id: idx for idx, user in enumerate(self.users)
         }
         return self._user_id_to_index_cache
 
@@ -61,18 +60,26 @@ class Conversation:
         if self._comment_id_to_index_cache is not None:
             return self._comment_id_to_index_cache
         self._comment_id_to_index_cache = {
-            comment.id: idx
-            for idx, comment in enumerate(self.comments)
+            comment.id: idx for idx, comment in enumerate(self.comments)
         }
         return self._comment_id_to_index_cache
-    
+
     def comment_ids_to_indices(self, comment_ids: List[int]) -> List[int]:
         indices = [self.comment_id_to_index.get(cid) for cid in comment_ids]
-        
+
         if None in indices:
             missing_ids = [cid for cid, idx in zip(comment_ids, indices) if idx is None]
             raise ValueError(f"Comment IDs not found in conversation: {missing_ids}")
-        
+
+        return [idx for idx in indices if idx is not None]
+
+    def user_ids_to_indices(self, user_ids: List[int]) -> List[int]:
+        indices = [self.user_id_to_index.get(uid) for uid in user_ids]
+
+        if None in indices:
+            missing_ids = [uid for uid, idx in zip(user_ids, indices) if idx is None]
+            raise ValueError(f"User IDs not found in conversation: {missing_ids}")
+
         return [idx for idx in indices if idx is not None]
 
     def _build_vote_matrix_from_votes(self):

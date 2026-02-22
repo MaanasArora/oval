@@ -12,11 +12,15 @@ class Variable(ABC):
     conversation: Conversation
 
     @abstractmethod
-    def fit(self, anchors: dict[int, float]) -> np.ndarray:
+    def fit(self, anchors: dict[int, float]) -> None:
         pass
 
     @abstractmethod
-    def predict_comments(self, comment_ids: List[int]) -> np.ndarray:
+    def predict_comments(self, comment_ids: Optional[List[int]] = None) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def predict_users(self, user_ids: Optional[List[int]] = None) -> np.ndarray:
         pass
 
     def score_comments(self, anchors: dict[int, float]) -> float:
@@ -58,10 +62,9 @@ class LinearVariable(Variable):
 
         self.labels = anchor_values
         self.participant_pred = pred
+        self.coef_ = model.coef_
 
-        return model.coef_
-
-    def predict_comments(self, comment_ids: List[int]) -> np.ndarray:
+    def predict_comments(self, comment_ids: List[int] = None) -> np.ndarray:
         if self.labels is None or self.participant_pred is None:
             raise ValueError("Variable must be fitted before scoring comments.")
 
@@ -75,6 +78,14 @@ class LinearVariable(Variable):
             @ self.participant_pred
             / len(self.conversation.users)
         )
+        return pred
+
+    def predict_users(self, user_ids: List[int] = None) -> np.ndarray:
+        if self.labels is None or self.participant_pred is None:
+            raise ValueError("Variable must be fitted before scoring users.")
+
+        user_indices = self.conversation.user_ids_to_indices(user_ids)
+        pred = self.participant_pred[user_indices]
         return pred
 
 
@@ -123,7 +134,14 @@ class DiffusionVariable(Variable):
             nonanchor_std + 1e-10
         )
 
-        return comment_scores
+        participant_scores = f[: votes_matrix.shape[0]]
+        participant_scores = (participant_scores - np.mean(participant_scores)) / (
+            np.std(participant_scores) + 1e-10
+        )
+
+        f[votes_matrix.shape[0] :] = comment_scores
+        f[: votes_matrix.shape[0]] = participant_scores
+        return f
 
     def fit(
         self,
@@ -139,6 +157,20 @@ class DiffusionVariable(Variable):
         self.anchors = anchors
         self.pred = self._diffuse(self.conversation.votes_matrix, labels, alpha)
 
-    def predict_comments(self, comment_ids: List[int]) -> np.ndarray:
+    def predict_comments(self, comment_ids: Optional[List[int]] = None) -> np.ndarray:
+        if not comment_ids:
+            return self.pred[self.conversation.votes_matrix.shape[0] :]
+
         comment_indices = self.conversation.comment_ids_to_indices(comment_ids)
+        comment_indices = [
+            self.conversation.votes_matrix.shape[0] + idx for idx in comment_indices
+        ]
         return self.pred[comment_indices]
+
+    def predict_users(self, user_ids: Optional[List[int]] = None) -> np.ndarray:
+        if not user_ids:
+            return self.pred[: len(self.conversation.users)]
+
+        user_indices = self.conversation.user_ids_to_indices(user_ids)
+        user_indices = [idx + len(self.conversation.comments) for idx in user_indices]
+        return self.pred[user_indices]
