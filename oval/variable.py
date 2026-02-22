@@ -64,9 +64,12 @@ class LinearVariable(Variable):
         self.participant_pred = pred
         self.coef_ = model.coef_
 
-    def predict_comments(self, comment_ids: List[int] = None) -> np.ndarray:
+    def predict_comments(self, comment_ids: Optional[List[int]] = None) -> np.ndarray:
         if self.labels is None or self.participant_pred is None:
             raise ValueError("Variable must be fitted before scoring comments.")
+
+        if comment_ids is None:
+            comment_ids = list(self.conversation.comment_id_to_index.keys())
 
         comment_indices = self.conversation.comment_ids_to_indices(comment_ids)
 
@@ -80,7 +83,10 @@ class LinearVariable(Variable):
         )
         return pred
 
-    def predict_users(self, user_ids: List[int] = None) -> np.ndarray:
+    def predict_users(self, user_ids: Optional[List[int]] = None) -> np.ndarray:
+        if user_ids is None:
+            user_ids = list(self.conversation.user_id_to_index.keys())
+
         if self.labels is None or self.participant_pred is None:
             raise ValueError("Variable must be fitted before scoring users.")
 
