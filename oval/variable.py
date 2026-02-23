@@ -99,20 +99,21 @@ class DiffusionVariable(Variable):
     def _diffuse(
         self, votes_matrix: np.ndarray, anchors: np.ndarray, alpha: float
     ) -> np.ndarray:
-        num_nodes = votes_matrix.shape[0] + votes_matrix.shape[1]
+        num_participants = votes_matrix.shape[0]
+        num_comments = votes_matrix.shape[1]
+
+        num_nodes = num_participants + num_comments
         graph = np.zeros((num_nodes, num_nodes))
 
-        graph[: votes_matrix.shape[0], votes_matrix.shape[0] :] = votes_matrix
-        graph[votes_matrix.shape[0] :, : votes_matrix.shape[0]] = votes_matrix.T
+        graph[:num_participants, num_participants:] = votes_matrix
+        graph[num_participants:, :num_participants] = votes_matrix.T
 
         mask = ~np.isnan(graph)
         deg = np.sum(mask, axis=1)
         P = np.nan_to_num(graph, nan=0) / np.where(deg > 0, deg, 1)[:, np.newaxis]
 
         anchor_mask = ~np.isnan(anchors)
-        y = np.concatenate(
-            [np.zeros(votes_matrix.shape[0]), np.nan_to_num(anchors, nan=0)]
-        )
+        y = np.concatenate([np.zeros(num_participants), np.nan_to_num(anchors, nan=0)])
         f = y.copy()
 
         delta = np.inf
@@ -121,17 +122,14 @@ class DiffusionVariable(Variable):
             delta = np.linalg.norm(f_new - f, ord=1)
             f = f_new
 
-        comment_scores = f[votes_matrix.shape[0] :]
-
+        comment_scores = f[num_participants:]
         comment_scores_anchor = comment_scores[anchor_mask]
         comment_scores_nonanchor = comment_scores[~anchor_mask]
 
-        anchor_mean, anchor_std = np.mean(comment_scores_anchor), np.abs(
-            np.std(comment_scores_anchor)
-        )
-        nonanchor_mean, nonanchor_std = np.mean(comment_scores_nonanchor), np.abs(
-            np.std(comment_scores_nonanchor)
-        )
+        anchor_mean = np.mean(comment_scores_anchor)
+        anchor_std = np.std(comment_scores_anchor)
+        nonanchor_mean = np.mean(comment_scores_nonanchor)
+        nonanchor_std = np.std(comment_scores_nonanchor)
 
         comment_scores[anchor_mask] = (comment_scores_anchor - anchor_mean) / (
             anchor_std + 1e-10
@@ -140,13 +138,20 @@ class DiffusionVariable(Variable):
             nonanchor_std + 1e-10
         )
 
-        participant_scores = f[: votes_matrix.shape[0]]
-        participant_scores = (participant_scores - np.mean(participant_scores)) / (
-            np.abs(np.std(participant_scores)) + 1e-10
+        participant_scores = f[:num_participants]
+
+        lower_bound = np.percentile(participant_scores, 5)
+        upper_bound = np.percentile(participant_scores, 95)
+        participant_scores = np.clip(participant_scores, lower_bound, upper_bound)
+
+        participant_mean = np.mean(participant_scores)
+        participant_std = np.std(participant_scores)
+        participant_scores = (participant_scores - participant_mean) / (
+            participant_std + 1e-10
         )
 
-        f[votes_matrix.shape[0] :] = comment_scores
-        f[: votes_matrix.shape[0]] = participant_scores
+        f[num_participants:] = comment_scores
+        f[:num_participants] = participant_scores
         return f
 
     def fit(
@@ -165,7 +170,7 @@ class DiffusionVariable(Variable):
 
     def predict_comments(self, comment_ids: Optional[List[int]] = None) -> np.ndarray:
         if not comment_ids:
-            return self.pred[self.conversation.votes_matrix.shape[0] :]
+            return self.pred[len(self.conversation.users) :]
 
         comment_indices = self.conversation.comment_ids_to_indices(comment_ids)
         comment_indices = [
@@ -178,5 +183,4 @@ class DiffusionVariable(Variable):
             return self.pred[: len(self.conversation.users)]
 
         user_indices = self.conversation.user_ids_to_indices(user_ids)
-        user_indices = [idx + len(self.conversation.comments) for idx in user_indices]
         return self.pred[user_indices]
